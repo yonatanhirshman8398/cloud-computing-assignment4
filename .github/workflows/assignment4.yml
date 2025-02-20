@@ -7,13 +7,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     outputs:
-      build_timestamp: ${{ env.TIMESTAMP }}
+      build_timestamp: ${{ github.run_id }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set timestamp
-        run: echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
 
       - name: Create log file
         run: |
@@ -35,8 +32,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: log-file-${{ env.TIMESTAMP }}
+          name: log-file-${{ github.run_id }}
           path: log.txt
+          overwrite: true
 
   test:
     needs: build
@@ -48,7 +46,7 @@ jobs:
       - name: Download build log file
         uses: actions/download-artifact@v4
         with:
-          name: log-file-${{ needs.build.outputs.build_timestamp }}
+          name: log-file-${{ github.run_id }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -84,15 +82,17 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ needs.build.outputs.build_timestamp }}
+          name: test-results-${{ github.run_id }}
           path: assn4_test_results.txt
+          overwrite: true
 
       - name: Upload log file
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: log-file-${{ needs.build.outputs.build_timestamp }}
+          name: log-file-${{ github.run_id }}
           path: log.txt
+          overwrite: true
 
   query:
     needs: test
@@ -104,7 +104,7 @@ jobs:
       - name: Download log file
         uses: actions/download-artifact@v4
         with:
-          name: log-file-${{ needs.build.outputs.build_timestamp }}
+          name: log-file-${{ github.run_id }}
 
       - name: Start containers
         run: docker compose up -d
@@ -198,11 +198,13 @@ jobs:
       - name: Upload response file
         uses: actions/upload-artifact@v4
         with:
-          name: query-response-${{ needs.build.outputs.build_timestamp }}
+          name: query-response-${{ github.run_id }}
           path: response.txt
+          overwrite: true
 
       - name: Upload final log file
         uses: actions/upload-artifact@v4
         with:
-          name: log-file-${{ needs.build.outputs.build_timestamp }}
+          name: log-file-${{ github.run_id }}
           path: log.txt
+          overwrite: true
