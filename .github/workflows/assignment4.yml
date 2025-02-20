@@ -114,9 +114,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install requests
 
-      - name: Execute POST requests for stocks
+      - name: Create stock data script
         run: |
-          python -c '
+          cat > post_stocks.py << 'EOL'
           import requests
           import json
 
@@ -167,12 +167,12 @@ jobs:
 
           for stock in stocks:
               response = requests.post("http://localhost:5001/stocks", json=stock)
-              print(f"Posted {stock[\"symbol\"]}: {response.status_code}")
-          '
+              print(f"Posted {stock['symbol']}: {response.status_code}")
+          EOL
 
-      - name: Process queries and generate response
+      - name: Create query processing script
         run: |
-          python -c '
+          cat > process_queries.py << 'EOL'
           import requests
           import os
 
@@ -193,7 +193,21 @@ jobs:
                   
                   f.write(f"query: {query}\n")
                   f.write(f"response: {response.text}\n\n")
-          '
+          EOL
+
+      - name: Create sample query file
+        run: |
+          cat > query.txt << 'EOL'
+          stocks:shares=7
+          capital-gains:numsharesgt=30
+          stocks:symbol=AAPL
+          EOL
+
+      - name: Execute POST requests for stocks
+        run: python post_stocks.py
+
+      - name: Process queries and generate response
+        run: python process_queries.py
 
       - name: Upload response file
         uses: actions/upload-artifact@v4
