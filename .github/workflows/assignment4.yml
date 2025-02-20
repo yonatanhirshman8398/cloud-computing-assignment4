@@ -10,9 +10,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Get start time
+      - name: Create log file
         run: |
-          echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
           echo "$(date -Iminutes)" > log.txt
           echo "Yonatan Hirshman" >> log.txt
 
@@ -27,15 +26,12 @@ jobs:
             exit 1
           fi
 
-      - name: Upload log file for build job
+      - name: Upload log file
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: log-file-${{ env.TIMESTAMP }}
+          name: log.txt
           path: log.txt
-
-    outputs:
-      build_status: ${{ job.status }}
 
   test:
     needs: build
@@ -47,7 +43,7 @@ jobs:
       - name: Download log file
         uses: actions/download-artifact@v4
         with:
-          name: log-file-${{ needs.build.outputs.TIMESTAMP }}
+          name: log.txt
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -83,18 +79,15 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ env.TIMESTAMP }}
+          name: assn4_test_results.txt
           path: assn4_test_results.txt
 
       - name: Upload updated log file
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: log-file-${{ env.TIMESTAMP }}
+          name: log.txt
           path: log.txt
-
-    outputs:
-      test_status: ${{ job.status }}
 
   query:
     needs: test
@@ -195,5 +188,5 @@ jobs:
       - name: Upload response file
         uses: actions/upload-artifact@v4
         with:
-          name: query-response-${{ env.TIMESTAMP }}
+          name: response.txt
           path: response.txt
