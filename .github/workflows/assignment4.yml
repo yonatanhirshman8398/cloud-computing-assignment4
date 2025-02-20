@@ -12,8 +12,9 @@ jobs:
 
       - name: Get start time
         run: |
+          echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
           echo "$(date -Iminutes)" > log.txt
-          echo "Yonathan Hirschmann" >> log.txt  # Replace with your actual name
+          echo "Yonatan Hirshman" >> log.txt
 
       - name: Build Docker images
         run: |
@@ -30,7 +31,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: log-file
+          name: log-file-${{ env.TIMESTAMP }}
           path: log.txt
 
     outputs:
@@ -46,7 +47,7 @@ jobs:
       - name: Download log file
         uses: actions/download-artifact@v4
         with:
-          name: log-file
+          name: log-file-${{ needs.build.outputs.TIMESTAMP }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -82,14 +83,14 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
+          name: test-results-${{ env.TIMESTAMP }}
           path: assn4_test_results.txt
 
       - name: Upload updated log file
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: log-file
+          name: log-file-${{ env.TIMESTAMP }}
           path: log.txt
 
     outputs:
@@ -194,5 +195,5 @@ jobs:
       - name: Upload response file
         uses: actions/upload-artifact@v4
         with:
-          name: query-response
+          name: query-response-${{ env.TIMESTAMP }}
           path: response.txt
