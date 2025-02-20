@@ -6,16 +6,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    outputs:
-      run_id: ${{ steps.set-id.outputs.run_id }}
-    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Set unique run ID
-        id: set-id
-        run: echo "run_id=$(date +%s)" >> $GITHUB_OUTPUT
 
       - name: Create log file
         run: |
@@ -37,7 +30,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: log-${{ steps.set-id.outputs.run_id }}
+          name: log-build
           path: log.txt
 
   test:
@@ -47,10 +40,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download log file
+      - name: Download build log file
         uses: actions/download-artifact@v4
         with:
-          name: log-${{ needs.build.outputs.run_id }}
+          name: log-build
           path: .
 
       - name: Set up Python
@@ -87,18 +80,18 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-${{ needs.build.outputs.run_id }}
+          name: test-results
           path: assn4_test_results.txt
 
       - name: Upload updated log file
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: log-${{ needs.build.outputs.run_id }}
+          name: log-final
           path: log.txt
 
   query:
-    needs: [build, test]
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -196,5 +189,5 @@ jobs:
       - name: Upload response file
         uses: actions/upload-artifact@v4
         with:
-          name: response-${{ needs.build.outputs.run_id }}
+          name: query-response
           path: response.txt
