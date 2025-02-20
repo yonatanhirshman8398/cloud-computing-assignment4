@@ -6,9 +6,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      build_timestamp: ${{ env.TIMESTAMP }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set timestamp
+        run: echo "TIMESTAMP=$(date +%s)" >> $GITHUB_ENV
 
       - name: Create log file
         run: |
@@ -30,7 +35,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: build-artifacts
+          name: log-file-${{ env.TIMESTAMP }}
           path: log.txt
 
   test:
@@ -43,7 +48,7 @@ jobs:
       - name: Download build log file
         uses: actions/download-artifact@v4
         with:
-          name: build-artifacts
+          name: log-file-${{ needs.build.outputs.build_timestamp }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -68,22 +73,26 @@ jobs:
 
       - name: Run tests
         run: |
-          mkdir -p test_output
-          pytest -v tests/assn4_tests.py > test_output/assn4_test_results.txt || true
+          pytest -v tests/assn4_tests.py > assn4_test_results.txt || true
           if [ $? -eq 0 ]; then
             echo "tests succeeded" >> log.txt
           else
             echo "tests failed" >> log.txt
           fi
 
-      - name: Upload test artifacts
+      - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-artifacts
-          path: |
-            test_output/assn4_test_results.txt
-            log.txt
+          name: test-results-${{ needs.build.outputs.build_timestamp }}
+          path: assn4_test_results.txt
+
+      - name: Upload log file
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: log-file-${{ needs.build.outputs.build_timestamp }}
+          path: log.txt
 
   query:
     needs: test
@@ -92,21 +101,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download build log file
+      - name: Download log file
         uses: actions/download-artifact@v4
         with:
-          name: test-artifacts
-          path: .
+          name: log-file-${{ needs.build.outputs.build_timestamp }}
 
       - name: Start containers
         run: docker compose up -d
 
-      - name: Create scripts directory
-        run: mkdir -p scripts
-
-      - name: Create post stocks script
+      - name: Install Python and requests
         run: |
-          cat > scripts/post_stocks.py << 'EOL'
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Execute POST requests for stocks
+        run: |
+          python -c '
           import requests
           import json
 
@@ -157,12 +167,12 @@ jobs:
 
           for stock in stocks:
               response = requests.post("http://localhost:5001/stocks", json=stock)
-              print(f"Posted {stock['symbol']}: {response.status_code}")
-          EOL
+              print(f"Posted {stock[\"symbol\"]}: {response.status_code}")
+          '
 
-      - name: Create query processing script
+      - name: Process queries and generate response
         run: |
-          cat > scripts/process_queries.py << 'EOL'
+          python -c '
           import requests
           import os
 
@@ -182,32 +192,17 @@ jobs:
                   response = requests.get(url)
                   
                   f.write(f"query: {query}\n")
-                  f.write(f"response: {response.text}\n")
-          EOL
+                  f.write(f"response: {response.text}\n\n")
+          '
 
-      - name: Create sample query file
-        run: |
-          cat > query.txt << 'EOL'
-          stocks:shares=7
-          capital-gains:numsharesgt=30
-          stocks:symbol=AAPL
-          EOL
-
-      - name: Install Python and requests
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests
-
-      - name: Execute POST requests for stocks
-        run: python scripts/post_stocks.py
-
-      - name: Process queries and generate response
-        run: python scripts/process_queries.py
-
-      - name: Upload final artifacts
+      - name: Upload response file
         uses: actions/upload-artifact@v4
         with:
-          name: final-artifacts
-          path: |
-            response.txt
-            log.txt
+          name: query-response-${{ needs.build.outputs.build_timestamp }}
+          path: response.txt
+
+      - name: Upload final log file
+        uses: actions/upload-artifact@v4
+        with:
+          name: log-file-${{ needs.build.outputs.build_timestamp }}
+          path: log.txt
