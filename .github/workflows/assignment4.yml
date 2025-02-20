@@ -185,6 +185,14 @@ jobs:
                   f.write(f"response: {response.text}\n")
           EOL
 
+      - name: Create sample query file
+        run: |
+          cat > query.txt << 'EOL'
+          stocks:shares=7
+          capital-gains:numsharesgt=30
+          stocks:symbol=AAPL
+          EOL
+
       - name: Install Python and requests
         run: |
           python -m pip install --upgrade pip
