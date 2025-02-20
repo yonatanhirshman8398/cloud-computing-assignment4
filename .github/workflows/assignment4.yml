@@ -13,7 +13,7 @@ jobs:
       - name: Get start time
         run: |
           echo "$(date -Iminutes)" > log.txt
-          echo "Your Name" >> log.txt  # Replace with your actual name
+          echo "Yonathan Hirschmann" >> log.txt  # Replace with your actual name
 
       - name: Build Docker images
         run: |
