@@ -30,7 +30,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: log-build
+          name: build-artifacts
           path: log.txt
 
   test:
@@ -43,8 +43,7 @@ jobs:
       - name: Download build log file
         uses: actions/download-artifact@v4
         with:
-          name: log-build
-          path: .
+          name: build-artifacts
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -69,26 +68,22 @@ jobs:
 
       - name: Run tests
         run: |
-          pytest -v tests/assn4_tests.py > assn4_test_results.txt || true
+          mkdir -p test_output
+          pytest -v tests/assn4_tests.py > test_output/assn4_test_results.txt || true
           if [ $? -eq 0 ]; then
             echo "tests succeeded" >> log.txt
           else
             echo "tests failed" >> log.txt
           fi
 
-      - name: Upload test results
+      - name: Upload test artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
-          path: assn4_test_results.txt
-
-      - name: Upload updated log file
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: log-final
-          path: log.txt
+          name: test-artifacts
+          path: |
+            test_output/assn4_test_results.txt
+            log.txt
 
   query:
     needs: test
@@ -97,17 +92,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Download build log file
+        uses: actions/download-artifact@v4
+        with:
+          name: test-artifacts
+          path: .
+
       - name: Start containers
         run: docker compose up -d
 
-      - name: Install Python and requests
-        run: |
-          python -m pip install --upgrade pip
-          pip install requests
+      - name: Create scripts directory
+        run: mkdir -p scripts
 
-      - name: Execute POST requests for stocks
+      - name: Create post stocks script
         run: |
-          python -c '
+          cat > scripts/post_stocks.py << 'EOL'
           import requests
           import json
 
@@ -158,12 +157,12 @@ jobs:
 
           for stock in stocks:
               response = requests.post("http://localhost:5001/stocks", json=stock)
-              print(f"Posted {stock[\"symbol\"]}: {response.status_code}")
-          '
+              print(f"Posted {stock['symbol']}: {response.status_code}")
+          EOL
 
-      - name: Process queries and generate response
+      - name: Create query processing script
         run: |
-          python -c '
+          cat > scripts/process_queries.py << 'EOL'
           import requests
           import os
 
@@ -184,10 +183,23 @@ jobs:
                   
                   f.write(f"query: {query}\n")
                   f.write(f"response: {response.text}\n")
-          '
+          EOL
 
-      - name: Upload response file
+      - name: Install Python and requests
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Execute POST requests for stocks
+        run: python scripts/post_stocks.py
+
+      - name: Process queries and generate response
+        run: python scripts/process_queries.py
+
+      - name: Upload final artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: query-response
-          path: response.txt
+          name: final-artifacts
+          path: |
+            response.txt
+            log.txt
