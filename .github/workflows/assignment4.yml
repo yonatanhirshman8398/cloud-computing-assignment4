@@ -170,14 +170,6 @@ jobs:
               print(f"Posted {stock['symbol']}: {response.status_code}")
           EOL
 
-      - name: Create queries file
-        run: |
-          cat > query.txt << 'EOL'
-          stocks:shares=7
-          capital-gains:numsharesgt=30
-          stocks:symbol=AAPL
-          EOL
-
       - name: Create query processing script
         run: |
           cat > process_queries.py << 'EOL'
@@ -190,6 +182,8 @@ jobs:
           with open("response.txt", "w") as f:
               for query in queries:
                   query = query.strip()
+                  if not query:  # Skip empty lines
+                      continue
                   service, qs = query.split(":")
                   
                   if service == "stocks":
