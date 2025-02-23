@@ -1,5 +1,0 @@
-stocks:shares=7
-capital-gains:numsharesgt=30
-stocks:symbol=AAPL
-stocks:purchase date=18-06-2024
-capital-gains:numshareslt=15
